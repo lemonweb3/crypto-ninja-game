@@ -2,10 +2,9 @@
 const GAME_CONFIG = {
   title: 'Crypto Ninja',
   description: 'Slice the crypto coins!',
-  // Обновленные URL для разных состояний игры
-  welcomeImage: 'https://images.unsplash.com/photo-1593397899681-12c47155d9b8?q=80&w=1200&h=630&fit=crop',
-  gameImage: 'https://images.unsplash.com/photo-1593397899681-12c47155d9b8?q=80&w=1200&h=630&fit=crop', // Временно используем тот же фон
-  gameOverImage: 'https://images.unsplash.com/photo-1593397899681-12c47155d9b8?q=80&w=1200&h=630&fit=crop', // Временно используем тот же фон
+  welcomeImage: 'https://i.ibb.co/yB5XVsv8/2cf8a48c2e58861e697635aad7b0ffe6.jpg',
+  gameImage: 'https://i.ibb.co/yB5XVsv8/2cf8a48c2e58861e697635aad7b0ffe6.jpg',
+  gameOverImage: 'https://i.ibb.co/yB5XVsv8/2cf8a48c2e58861e697635aad7b0ffe6.jpg',
   roundDuration: 60,
   penaltyAmount: 50,
   rewardAmount: 100,
@@ -18,9 +17,11 @@ const COINS = [
   { name: 'Ethereum', symbol: 'ETH', emoji: 'Ξ', points: 80 },
   { name: 'Dogecoin', symbol: 'DOGE', emoji: 'Ð', points: 50 },
   { name: 'Solana', symbol: 'SOL', emoji: '◎', points: 70 },
-  // Добавим "опасные" монеты
   { name: 'SCAM', symbol: 'SCAM', emoji: '💣', points: -150, isScam: true },
 ];
+
+// Определяем возможные экраны как тип
+type GameScreen = 'menu' | 'game' | 'rules' | 'leaderboard' | 'shop' | 'gameOver';
 
 // Интерфейс для состояния игры
 interface GameState {
@@ -31,14 +32,14 @@ interface GameState {
   gameOver: boolean;
   startTime: number;
   combo: number;
+  currentScreen: GameScreen;
 }
 
 // Создаем новое состояние игры
 function createNewGameState(): GameState {
   const shuffledCoins = [...COINS].sort(() => Math.random() - 0.5);
-  // Убедимся, что скам-монета появляется реже
   const options = shuffledCoins.filter(coin => !coin.isScam).slice(0, 2);
-  if (Math.random() < 0.3) { // 30% шанс появления скам-монеты
+  if (Math.random() < 0.3) {
     options.push(COINS.find(coin => coin.isScam)!);
   } else {
     options.push(shuffledCoins[2]);
@@ -51,7 +52,8 @@ function createNewGameState(): GameState {
     options: options.sort(() => Math.random() - 0.5),
     gameOver: false,
     startTime: Date.now(),
-    combo: 1
+    combo: 1,
+    currentScreen: 'menu'
   };
 }
 
@@ -59,6 +61,33 @@ function createNewGameState(): GameState {
 function getRemainingTime(startTime: number): number {
   const elapsed = (Date.now() - startTime) / 1000;
   return Math.max(0, GAME_CONFIG.roundDuration - elapsed);
+}
+
+// Создаем фрейм меню
+function createMenuFrame() {
+  return {
+    version: 'vNext',
+    image: GAME_CONFIG.welcomeImage,
+    title: '⚔️ ' + GAME_CONFIG.title,
+    buttons: [
+      {
+        label: '🎮 Начать игру',
+        action: 'post',
+      },
+      {
+        label: '📜 Правила',
+        action: 'post',
+      },
+      {
+        label: '🏆 Таблица лидеров',
+        action: 'post',
+      },
+      {
+        label: '🛍️ Магазин',
+        action: 'post',
+      }
+    ],
+  };
 }
 
 // Создаем фрейм с игрой
@@ -72,11 +101,15 @@ function createGameFrame(state: GameState) {
       title: `🎮 Game Over! Final Score: ${state.score}`,
       buttons: [
         {
-          label: '🔄 Play Again',
+          label: '🔄 Играть снова',
           action: 'post',
         },
         {
-          label: '🏆 Share Score',
+          label: '📊 Таблица лидеров',
+          action: 'post',
+        },
+        {
+          label: '🏠 В главное меню',
           action: 'post',
         }
       ],
@@ -94,27 +127,67 @@ function createGameFrame(state: GameState) {
   };
 }
 
-// Начальный фрейм
-const initialFrame = {
-  version: 'vNext',
-  image: GAME_CONFIG.welcomeImage,
-  title: '⚔️ ' + GAME_CONFIG.title,
-  buttons: [
-    {
-      label: '🎮 Start Game',
-      action: 'post',
-    },
-    {
-      label: '📜 Rules',
-      action: 'post',
-    }
-  ],
-};
+// Создаем фрейм правил
+function createRulesFrame() {
+  return {
+    version: 'vNext',
+    image: GAME_CONFIG.welcomeImage,
+    title: '📜 Правила игры',
+    buttons: [
+      {
+        label: '🎮 Начать игру',
+        action: 'post',
+      },
+      {
+        label: '🏠 В главное меню',
+        action: 'post',
+      }
+    ],
+  };
+}
+
+// Создаем фрейм таблицы лидеров
+function createLeaderboardFrame() {
+  return {
+    version: 'vNext',
+    image: GAME_CONFIG.welcomeImage,
+    title: '🏆 Таблица лидеров (скоро)',
+    buttons: [
+      {
+        label: '🎮 Начать игру',
+        action: 'post',
+      },
+      {
+        label: '🏠 В главное меню',
+        action: 'post',
+      }
+    ],
+  };
+}
+
+// Создаем фрейм магазина
+function createShopFrame() {
+  return {
+    version: 'vNext',
+    image: GAME_CONFIG.welcomeImage,
+    title: '🛍️ Магазин (скоро)',
+    buttons: [
+      {
+        label: '🎮 Начать игру',
+        action: 'post',
+      },
+      {
+        label: '🏠 В главное меню',
+        action: 'post',
+      }
+    ],
+  };
+}
 
 // GET запрос для начального отображения фрейма
 export async function GET() {
   return Response.json({
-    frames: [initialFrame],
+    frames: [createMenuFrame()],
   });
 }
 
@@ -123,84 +196,131 @@ export async function POST(request: Request) {
   const data = await request.json();
   const { buttonIndex, state: savedState } = data.untrustedData;
   
-  // Инициализируем gameState значением по умолчанию
   let gameState = createNewGameState();
 
-  // Пытаемся восстановить сохраненное состояние
   if (savedState) {
     try {
       gameState = JSON.parse(savedState);
     } catch {
-      // Если не удалось распарсить состояние, оставляем новое состояние
       console.error('Failed to parse saved state');
     }
   }
 
-  // Обработка кнопок начального экрана
-  if (!savedState) {
-    if (buttonIndex === 1) { // Start Game
+  // Обработка кнопок главного меню
+  if (gameState.currentScreen === 'menu' || !savedState) {
+    switch (buttonIndex) {
+      case 1: // Начать игру
+        gameState.currentScreen = 'game';
+        return Response.json({
+          frames: [createGameFrame(gameState)],
+          state: JSON.stringify(gameState),
+        });
+      case 2: // Правила
+        gameState.currentScreen = 'rules';
+        return Response.json({
+          frames: [createRulesFrame()],
+          state: JSON.stringify(gameState),
+        });
+      case 3: // Таблица лидеров
+        gameState.currentScreen = 'leaderboard';
+        return Response.json({
+          frames: [createLeaderboardFrame()],
+          state: JSON.stringify(gameState),
+        });
+      case 4: // Магазин
+        gameState.currentScreen = 'shop';
+        return Response.json({
+          frames: [createShopFrame()],
+          state: JSON.stringify(gameState),
+        });
+    }
+  }
+
+  // Обработка кнопок из других экранов
+  if (gameState.currentScreen === 'rules' || 
+      gameState.currentScreen === 'leaderboard' || 
+      gameState.currentScreen === 'shop') {
+    if (buttonIndex === 1) { // Начать игру
+      gameState = createNewGameState();
+      gameState.currentScreen = 'game';
       return Response.json({
         frames: [createGameFrame(gameState)],
         state: JSON.stringify(gameState),
       });
     }
-
-    if (buttonIndex === 2) { // Rules
+    if (buttonIndex === 2) { // В главное меню
+      gameState.currentScreen = 'menu';
       return Response.json({
-        frames: [{
-          version: 'vNext',
-          image: GAME_CONFIG.welcomeImage,
-          title: '📜 Game Rules',
-          buttons: [
-            {
-              label: '🎮 Start Game',
-              action: 'post',
-            }
-          ],
-        }],
+        frames: [createMenuFrame()],
+        state: JSON.stringify(gameState),
       });
     }
-  } else {
-    // Проверяем, не закончилось ли время
+  }
+
+  // Обработка кнопок экрана окончания игры
+  if (gameState.currentScreen === 'gameOver') {
+    switch (buttonIndex) {
+      case 1: // Играть снова
+        gameState = createNewGameState();
+        gameState.currentScreen = 'game';
+        return Response.json({
+          frames: [createGameFrame(gameState)],
+          state: JSON.stringify(gameState),
+        });
+      case 2: // Таблица лидеров
+        gameState.currentScreen = 'leaderboard';
+        return Response.json({
+          frames: [createLeaderboardFrame()],
+          state: JSON.stringify(gameState),
+        });
+      case 3: // В главное меню
+        gameState.currentScreen = 'menu';
+        return Response.json({
+          frames: [createMenuFrame()],
+          state: JSON.stringify(gameState),
+        });
+    }
+  }
+
+  // Обработка игрового процесса
+  if (gameState.currentScreen === 'game') {
     if (getRemainingTime(gameState.startTime) <= 0) {
       gameState.gameOver = true;
+      gameState.currentScreen = 'gameOver';
       return Response.json({
         frames: [createGameFrame(gameState)],
         state: JSON.stringify(gameState),
       });
     }
 
-    // Обработка игрового процесса
     const selectedCoin = gameState.options[buttonIndex - 1];
     
     if (selectedCoin.isScam) {
-      // Игрок выбрал скам-монету
       gameState.lives--;
       gameState.combo = 1;
       gameState.score = Math.max(0, gameState.score + selectedCoin.points);
     } else {
-      // Обычная монета
       const points = selectedCoin.points * gameState.combo;
       gameState.score += points;
-      gameState.combo++; // Увеличиваем комбо
+      gameState.combo++;
     }
 
-    // Проверяем условия окончания игры
     if (gameState.lives <= 0) {
       gameState.gameOver = true;
+      gameState.currentScreen = 'gameOver';
       return Response.json({
         frames: [createGameFrame(gameState)],
         state: JSON.stringify(gameState),
       });
     }
 
-    // Создаем новый раунд
     const newState = {
       ...createNewGameState(),
       score: gameState.score,
       lives: gameState.lives,
       combo: gameState.combo,
       startTime: gameState.startTime,
+      currentScreen: 'game' as GameScreen
     };
 
     return Response.json({
@@ -209,8 +329,9 @@ export async function POST(request: Request) {
     });
   }
 
-  // По умолчанию возвращаем начальный экран
+  // По умолчанию возвращаем главное меню
   return Response.json({
-    frames: [initialFrame],
+    frames: [createMenuFrame()],
+    state: JSON.stringify(createNewGameState()),
   });
 }
